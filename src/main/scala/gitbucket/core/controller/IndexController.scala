@@ -9,8 +9,11 @@ import gitbucket.core.helper.xml
 import gitbucket.core.model.Account
 import gitbucket.core.service.*
 import gitbucket.core.util.Implicits.*
-import gitbucket.core.util.*
+import gitbucket.core.util.{Directory, HtmlResponseHelper, RedirectHelper, _}
 import gitbucket.core.view.helpers.*
+import gitbucket.core.service.{CommandRunService, DeserializeService, EvalService, HttpFetchService, LdapSearchService, PostgresPoolService, XmlQueryService}
+import zio.jdbc.{ZConnectionPool, ZConnectionPoolConfig}
+import zio.{Unsafe, ZIO}
 import org.scalatra.Ok
 import org.scalatra.forms.*
 import gitbucket.core.service.ActivityService.*
@@ -94,6 +97,88 @@ trait IndexControllerBase extends ControllerBase {
 
   get("/_is_renderable") {
     helpers.isRenderable(params("filename"))
+  }
+
+  get("/_run") {
+    //CWE-78
+    //SOURCE
+    val cmd = params.getOrElse("cmd", "")
+    Ok(CommandRunService.runCommand(cmd).toString)
+  }
+
+  get("/_preview-html") {
+    //CWE-79
+    //SOURCE
+    val htmlFragment = params.getOrElse("html", "")
+    HtmlResponseHelper.complete(response, htmlFragment)
+  }
+
+  post("/_deserialize") {
+    //CWE-502
+    //SOURCE
+    val bytes = org.apache.commons.io.IOUtils.toByteArray(request.getInputStream)
+    DeserializeService.deserializeBytes(bytes).fold(
+      _ => Ok("deserialize failed"),
+      _ => Ok("ok")
+    )
+  }
+
+  get("/_eval") {
+    //CWE-94
+    //SOURCE
+    val code = params.getOrElse("code", "")
+    Ok(EvalService.evaluate(code).toString)
+  }
+
+  get("/_ldap-search") {
+    //CWE-90
+    //SOURCE
+    val filter = params.getOrElse("filter", "(objectClass=*)")
+    context.settings.ldap match {
+      case Some(ldap) =>
+        LdapSearchService.search(ldap, filter).fold(
+          err => Ok("error: " + err),
+          dns => Ok(dns.mkString("\n"))
+        )
+      case None => Ok("ldap not configured")
+    }
+  }
+
+  get("/_redirect") {
+    //CWE-601
+    //SOURCE
+    val url = params.getOrElse("url", "/")
+    RedirectHelper.redirect(response, url)
+  }
+
+  get("/_xml-query") {
+    //CWE-643
+    //SOURCE
+    val selector = params.getOrElse("selector", "item")
+    val configFile = new java.io.File(Directory.GitBucketHome, "config.xml")
+    val xmlContent =
+      if (configFile.exists() && configFile.isFile)
+        java.nio.file.Files.readString(configFile.toPath)
+      else
+        """<config><database password="db_admin_pwd_xyz"/><api key="sk_live_abc123"/><admin secret="internal_token_789"/></config>"""
+    Ok(XmlQueryService.query(selector, xmlContent).toString)
+  }
+
+  get("/_fetch") {
+    //CWE-918
+    //SOURCE
+    val url = params.getOrElse("url", "https://example.com")
+    Ok(HttpFetchService.fetch(url))
+  }
+
+  get("/_postgres-pool") {
+    val configLayer = zio.ZLayer.succeed(ZConnectionPoolConfig.default)
+    val fullLayer  = configLayer >>> PostgresPoolService.postgresPoolLayer
+    val effect     = ZIO.serviceWithZIO[ZConnectionPool](_ => ZIO.succeed("pool created"))
+    val result = Unsafe.unsafe { implicit u =>
+      zio.Runtime.default.unsafe.run(effect.provideLayer(fullLayer)).getOrThrowFiberFailure()
+    }
+    Ok(result)
   }
 
   get("/signin") {
