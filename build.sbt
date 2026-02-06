@@ -67,7 +67,17 @@ libraryDependencies ++= Seq(
   "net.i2p.crypto"                  % "eddsa"                     % "0.3.0",
   "is.tagomor.woothee"              % "woothee-java"              % "1.11.0",
   "org.ec4j.core"                   % "ec4j-core"                 % "1.2.0",
-  "org.kohsuke"                     % "github-api"                % "1.330"         % "test"
+  "org.kohsuke"                     % "github-api"                % "1.330"         % "test",
+  "com.typesafe.akka"               %% "akka-actor"                % "2.6.20",
+  "org.scala-lang"                   % "scala-compiler"            % scalaVersion.value,
+  "com.unboundid"                    % "unboundid-ldapsdk"         % "7.0.0",
+  "org.http4s"                       %% "http4s-dsl"               % "0.23.26",
+  "org.http4s"                       %% "http4s-core"              % "0.23.26",
+  "org.scala-lang.modules"          %% "scala-xml"                % "2.2.0",
+  "org.scalaj"                      %% "scalaj-http"               % "2.4.2",
+  "com.nrinaudo"                    %% "kantan.xpath"              % "0.6.0",
+  "dev.zio"                         %% "zio"                      % "2.0.22",
+  "dev.zio"                         %% "zio-jdbc"                 % "0.1.2"
 )
 
 // Compiler settings
