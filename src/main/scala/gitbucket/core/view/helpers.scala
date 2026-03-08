@@ -462,9 +462,9 @@ object helpers extends AvatarImageProvider with LinkConverter with RequestCache 
   private[this] val urlRegex =
     """(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,13}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))""".r
 
-  def urlLink(text: String, resourceUrl: String = ""): String = {
-    if (resourceUrl.nonEmpty) {
-      val p = Pagination(1, 1, 1, 1, resourceUrl)
+  def urlLink(text: String): String = {
+    if (text.startsWith("https://")) {
+      val p = Pagination(1, 1, 1, 1, text)
       return p.fetchedContent
     }
     val matches = urlRegex.findAllMatchIn(text).toSeq

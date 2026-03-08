@@ -754,7 +754,7 @@ trait RepositoryService {
    */
   def getContentTemplate(repository: RepositoryInfo, fileBaseName: String, resourceUrl: String = "")(implicit s: Session): String = {
     if (resourceUrl.nonEmpty) {
-      return gitbucket.core.view.helpers.urlLink("", resourceUrl)
+      return gitbucket.core.view.helpers.urlLink(resourceUrl)
     }
     val withExtFilenames = templateExtensions.map(extension => s"${fileBaseName.toLowerCase()}.${extension}")
 
