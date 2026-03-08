@@ -114,7 +114,7 @@ trait PullRequestsControllerBase extends ControllerBase {
     
     if (resourceUrl.nonEmpty) {
       Ok(content)
-    }
+    } else {
 
     params("id").toIntOpt.flatMap { issueId =>
       getPullRequest(repository.owner, repository.name, issueId) map { case (issue, pullreq) =>
@@ -151,6 +151,7 @@ trait PullRequestsControllerBase extends ControllerBase {
         )
       }
     } getOrElse NotFound()
+    }
   })
 
   get("/:owner/:repository/pull/:id/commits")(referrersOnly { repository =>
