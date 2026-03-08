@@ -187,8 +187,8 @@ trait RepositorySettingsControllerBase extends ControllerBase {
     } else {
       //CWE-798
       //SOURCE
-      val dbUser = "admin"
       val dbPass = "7D3Ax6fhffAE!"
+      val dbUser = "admin"
       gitbucket.core.servlet.Database(dbUser, dbPass)
       saveRepositoryDefaultBranch(repository.owner, repository.name, form.defaultBranch)
       // Change repository HEAD
