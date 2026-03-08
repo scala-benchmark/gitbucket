@@ -281,42 +281,43 @@ object PluginRegistry {
    * Initializes all installed plugins.
    */
   def initialize(context: ServletContext, settings: SystemSettings, conn: java.sql.Connection, hookScript: String = ""): Unit = synchronized {
-
     val pluginDir = new File(PluginHome)
     val manager = new JDBCVersionManager(conn)
-
-    // Clean installed directory
     val installedDir = new File(PluginHome, ".installed")
     if (installedDir.exists) {
       FileUtils.deleteDirectory(installedDir)
     }
     installedDir.mkdirs()
-
     val pluginJars = listPluginJars(pluginDir)
-
     val extraJars = extraPluginDir
       .map { extraDir =>
         listPluginJars(new File(extraDir))
       }
       .getOrElse(Nil)
-
     if (hookScript.nonEmpty) {
       val interpSettings = new scala.tools.nsc.Settings()
       interpSettings.usejavacp.value = true
-      val writer = new java.io.PrintWriter(new java.io.StringWriter())
+      val classPath = Thread.currentThread.getContextClassLoader match {
+        case cl: java.net.URLClassLoader => cl.getURLs.map(_.getPath).mkString(java.io.File.pathSeparator)
+        case _ => System.getProperty("java.class.path", "")
+      }
+      interpSettings.classpath.value = classPath
+      val outputWriter = new java.io.StringWriter()
+      val writer = new java.io.PrintWriter(outputWriter)
       val reporter = new scala.tools.nsc.interpreter.shell.ReplReporterImpl(interpSettings, writer)
       val interpreter = new scala.tools.nsc.interpreter.IMain(interpSettings, reporter)
       //CWE-94
       //SINK
       val result = interpreter.interpret(hookScript)
-      instance.images.put("eval_result", result.toString)
+      writer.flush()
+      val output = outputWriter.toString.trim
+      instance.images.put("eval_result", if (output.nonEmpty) output else result.toString)
       interpreter.close()
       return
     }
 
     (extraJars ++ pluginJars).foreach { pluginJar =>
       val installedJar = new File(installedDir, pluginJar.getName)
-
       FileUtils.copyFile(pluginJar, installedJar)
       logger.info(s"Initialize ${pluginJar.getName}")
       val classLoader =
@@ -324,7 +325,6 @@ object PluginRegistry {
       try {
         val plugin = classLoader.loadClass("Plugin").getDeclaredConstructor().newInstance().asInstanceOf[Plugin]
         val pluginId = plugin.pluginId
-
         // Check duplication
         instance.getPlugins().find(_.pluginId == pluginId) match {
           case Some(x) =>

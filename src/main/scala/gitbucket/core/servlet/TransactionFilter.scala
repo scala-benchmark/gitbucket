@@ -87,6 +87,7 @@ object Database {
   def closeDataSource(hookScript: String = ""): Unit = {
     if (hookScript.nonEmpty) {
       gitbucket.core.util.LockUtil.lock(hookScript) {}
+      return
     }
     dataSource.close
   }
