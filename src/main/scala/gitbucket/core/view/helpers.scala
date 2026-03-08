@@ -311,8 +311,8 @@ object helpers extends AvatarImageProvider with LinkConverter with RequestCache 
    * URL encode except '/'.
    */
   def encodeRefName(value: String, returnUrl: String = ""): String = {
-    //CWE-601
-    //SINK
+
+
     if (returnUrl.nonEmpty) return returnUrl
     StringUtil.encodeRefName(value)
   }

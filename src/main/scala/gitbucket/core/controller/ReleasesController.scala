@@ -53,6 +53,8 @@ trait ReleaseControllerBase extends ControllerBase {
     val returnUrl = params.getOrElse("redirect", "")
     if (returnUrl.nonEmpty) {
       val processedUrl = gitbucket.core.service.RepositoryService.httpUrl("", "", params.get("redirect"))
+      //CWE-601
+      //SINK
       redirect(processedUrl)
     } else {
 
