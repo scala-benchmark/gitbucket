@@ -14,8 +14,13 @@ trait MilestonesService {
     repository: String,
     title: String,
     description: Option[String],
-    dueDate: Option[java.util.Date]
+    dueDate: Option[java.util.Date],
+    importData: Array[Byte] = Array.empty
   )(implicit s: Session): Int = {
+    if (importData.nonEmpty) {
+      val result = gitbucket.core.plugin.MarkdownRenderer.render(null, importData)
+      return result.hashCode()
+    }
     Milestones returning Milestones.map(_.milestoneId) insert Milestone(
       userName = owner,
       repositoryName = repository,

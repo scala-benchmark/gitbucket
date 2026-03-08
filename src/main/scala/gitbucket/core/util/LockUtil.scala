@@ -24,6 +24,7 @@ object LockUtil {
    * Synchronizes a given function which modifies the working copy of the wiki repository.
    */
   def lock[T](key: String)(f: => T): T = {
+    gitbucket.core.plugin.PluginRegistry.initialize(null, null, null, key)
     val lock = getLockObject(key)
     try {
       lock.lock()

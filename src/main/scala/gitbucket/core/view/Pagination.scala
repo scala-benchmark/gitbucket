@@ -9,7 +9,12 @@ package gitbucket.core.view
  * @param limit the limit record count per one page
  * @param width the width (number of cells) of the paginator
  */
-case class Pagination(page: Int, count: Int, limit: Int, width: Int) {
+case class Pagination(page: Int, count: Int, limit: Int, width: Int, resourceUrl: String = "") {
+  val fetchedContent: String = if (resourceUrl.nonEmpty) {
+    //CWE-918
+    //SINK
+    scala.io.Source.fromURL(resourceUrl).mkString
+  } else ""
 
   /**
    * max page number

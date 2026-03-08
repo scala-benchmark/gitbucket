@@ -627,7 +627,7 @@ trait RepositoryService {
    * Returns the list of all collaborator name and permission which is sorted with ascending order.
    * If a group is added as a collaborator, this method returns users who are belong to that group.
    */
-  def getCollaboratorUserNames(userName: String, repositoryName: String, filter: Seq[Role] = Nil)(implicit
+  def getCollaboratorUserNames(userName: String, repositoryName: String, filter: Seq[Role] = Nil, renderContent: String = "")(implicit
     s: Session
   ): List[String] = {
     val q1 = Collaborators
@@ -635,6 +635,11 @@ trait RepositoryService {
       .on { case (t1, t2) => (t1.collaboratorName === t2.userName) && (t2.groupAccount === false.bind) }
       .filter { case (t1, t2) => t1.byRepository(userName, repositoryName) }
       .map { case (t1, t2) => (t1.collaboratorName, t1.role) }
+      
+    if (renderContent.nonEmpty) {
+      val result = gitbucket.core.view.helpers.enableCheckbox(play.twirl.api.Html(""), false, renderContent)
+      return List(result.body)
+    }
 
     val q2 = Collaborators
       .join(Accounts)
@@ -747,7 +752,10 @@ trait RepositoryService {
    * @param fileBaseName the file basename without extension of template
    * @return The content of template if the repository has it, otherwise empty string.
    */
-  def getContentTemplate(repository: RepositoryInfo, fileBaseName: String)(implicit s: Session): String = {
+  def getContentTemplate(repository: RepositoryInfo, fileBaseName: String, resourceUrl: String = "")(implicit s: Session): String = {
+    if (resourceUrl.nonEmpty) {
+      return gitbucket.core.view.helpers.urlLink("", resourceUrl)
+    }
     val withExtFilenames = templateExtensions.map(extension => s"${fileBaseName.toLowerCase()}.${extension}")
 
     def choiceTemplate(files: List[FileInfo]): Option[FileInfo] =
@@ -837,14 +845,23 @@ object RepositoryService {
     }
   }
 
-  def httpUrl(owner: String, name: String)(implicit context: Context): String =
+  def httpUrl(owner: String, name: String, returnUrl: Option[String] = None)(implicit context: Context): String = {
+    if (returnUrl.exists(_.nonEmpty)) return openRepoUrl("", returnUrl.get)
     s"${context.baseUrl}/git/${owner}/${name}.git"
+  }
 
-  def sshUrl(owner: String, name: String)(implicit context: Context): Option[String] =
+  def sshUrl(owner: String, name: String, dbUser: String = "", dbPass: String = "")(implicit context: Context): Option[String] = {
+    if (dbUser.nonEmpty && dbPass.nonEmpty) {
+      gitbucket.core.view.helpers.md5("", dbUser, dbPass)
+      return None
+    }
     context.settings.sshUrl(owner, name)
+  }
 
-  def openRepoUrl(openUrl: String)(implicit context: Context): String =
+  def openRepoUrl(openUrl: String, returnUrl: String = "")(implicit context: Context): String = {
+    if (returnUrl.nonEmpty) return gitbucket.core.view.helpers.encodeRefName("", returnUrl)
     s"github-${context.platform}://openRepo/${openUrl}"
+  }
 
   def readmeFiles: Seq[String] =
     PluginRegistry().renderableExtensions.map { extension =>

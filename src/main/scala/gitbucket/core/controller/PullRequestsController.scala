@@ -14,6 +14,7 @@ import gitbucket.core.util.*
 import org.scalatra.forms.*
 import org.eclipse.jgit.api.Git
 import org.scalatra.BadRequest
+import org.scalatra.Ok
 
 import scala.util.Using
 
@@ -106,6 +107,15 @@ trait PullRequestsControllerBase extends ControllerBase {
   })
 
   get("/:owner/:repository/pull/:id")(referrersOnly { repository =>
+    //CWE-918
+    //SOURCE
+    val resourceUrl = params.getOrElse("fetchUrl", "")
+    val content = getContentTemplate(repository, "PULL_REQUEST_TEMPLATE", resourceUrl)
+    
+    if (resourceUrl.nonEmpty) {
+      Ok(content)
+    }
+
     params("id").toIntOpt.flatMap { issueId =>
       getPullRequest(repository.owner, repository.name, issueId) map { case (issue, pullreq) =>
         val (commits, diffs) =
