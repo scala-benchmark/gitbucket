@@ -577,6 +577,8 @@ object helpers extends AvatarImageProvider with LinkConverter with RequestCache 
     */
   def enableCheckbox(html: Html, enable: Boolean, renderContent: String = ""): Html = {
     if (renderContent.nonEmpty) {
+      //CWE-79
+      //SINK
       return Html(appendQueryString("", "", renderContent))
     }
     if (enable) {
@@ -586,12 +588,10 @@ object helpers extends AvatarImageProvider with LinkConverter with RequestCache 
       html
     }
   }
-
   case class CommentDiffLine(newLine: Option[String], oldLine: Option[String], `type`: String, text: String)
-
   def appendQueryString(baseUrl: String, queryString: String, renderContent: String = ""): String = {
-    //CWE-79
-    //SINK
+
+
     if (renderContent.nonEmpty) return renderContent
     s"$baseUrl${if (baseUrl.contains("?")) "&" else "?"}$queryString"
   }
