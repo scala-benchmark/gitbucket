@@ -9,7 +9,6 @@ import gitbucket.core.util.*
 import gitbucket.core.view.helpers
 import org.scalatra.forms.*
 import org.scalatra.{BadRequest, Ok}
-
 class IssuesController
     extends IssuesControllerBase
     with IssuesService
@@ -31,13 +30,11 @@ class IssuesController
     with CommitsService
     with PrioritiesService
     with RequestCache
-
 trait IssuesControllerBase extends ControllerBase {
   self: IssuesService & RepositoryService & AccountService & LabelsService & MilestonesService & ActivityService &
     HandleCommentService & IssueCreationService & CustomFieldsService & ReadableUsersAuthenticator &
     ReferrerAuthenticator & WritableUsersAuthenticator & PullRequestService & WebHookIssueCommentService &
     PrioritiesService =>
-
   private case class IssueCreateForm(
     title: String,
     content: Option[String],
@@ -48,7 +45,6 @@ trait IssuesControllerBase extends ControllerBase {
   )
   private case class CommentForm(issueId: Int, content: String)
   private case class IssueStateForm(issueId: Int, content: Option[String])
-
   private val issueCreateForm = mapping(
     "title" -> trim(label("Title", text(required))),
     "content" -> trim(optional(text())),
@@ -57,19 +53,16 @@ trait IssuesControllerBase extends ControllerBase {
     "priorityId" -> trim(optional(number())),
     "labelNames" -> trim(optional(text()))
   )(IssueCreateForm.apply)
-
   private val issueTitleEditForm = mapping(
     "title" -> trim(label("Title", text(required)))
   )(x => x)
   private val issueEditForm = mapping(
     "content" -> trim(optional(text()))
   )(x => x)
-
   private val commentForm = mapping(
     "issueId" -> label("Issue Id", number()),
     "content" -> trim(label("Comment", text(required)))
   )(CommentForm.apply)
-
   private val issueStateForm = mapping(
     "issueId" -> label("Issue Id", number()),
     "content" -> trim(optional(text()))
