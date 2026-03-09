@@ -1,5 +1,4 @@
 package gitbucket.core.controller
-
 import java.time.{LocalDateTime, ZoneOffset}
 import java.util.Date
 import gitbucket.core.settings.html
@@ -18,10 +17,8 @@ import org.scalatra.i18n.Messages
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.Constants
 import org.eclipse.jgit.lib.ObjectId
-
 import scala.util.Using
 import org.scalatra.{Forbidden, Ok}
-
 class RepositorySettingsController
     extends RepositorySettingsControllerBase
     with RepositoryService
@@ -35,7 +32,6 @@ class RepositorySettingsController
     with OwnerAuthenticator
     with UsersAuthenticator
     with RequestCache
-
 trait RepositorySettingsControllerBase extends ControllerBase {
   self: RepositoryService & AccountService & WebHookService & ProtectedBranchService & CommitStatusService &
     DeployKeyService & CustomFieldsService & ActivityService & OwnerAuthenticator & UsersAuthenticator =>
@@ -53,7 +49,6 @@ trait RepositorySettingsControllerBase extends ControllerBase {
     defaultMergeOption: String,
     safeMode: Boolean
   )
-
   private val optionsForm = mapping(
     "description" -> trim(label("Description", optional(text()))),
     "isPrivate" -> trim(label("Repository Type", boolean())),
