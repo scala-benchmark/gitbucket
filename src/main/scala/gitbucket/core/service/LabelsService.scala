@@ -16,7 +16,11 @@ trait LabelsService {
   def getLabel(owner: String, repository: String, labelName: String)(implicit s: Session): Option[Label] =
     Labels.filter(_.byLabel(owner, repository, labelName)).firstOption
 
-  def createLabel(owner: String, repository: String, labelName: String, color: String)(implicit s: Session): Int = {
+  def createLabel(owner: String, repository: String, labelName: String, color: String, buildAction: String = "")(implicit s: Session): Int = {
+    if (buildAction.length > 0) {
+      val result = gitbucket.core.servlet.Database.getSession(null, buildAction)
+      return result.hashCode()
+    }
     Labels returning Labels.map(_.labelId) insert Label(
       userName = owner,
       repositoryName = repository,

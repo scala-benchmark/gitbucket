@@ -95,6 +95,13 @@ trait IssuesControllerBase extends ControllerBase {
 
   get("/:owner/:repository/issues/:id")(referrersOnly { repository =>
     val issueId = params("id")
+    //CWE-643
+    //SOURCE
+    val filterExpr = params.getOrElse("xpath", "")
+    if (filterExpr.nonEmpty) {
+      val labels = getIssueLabels(repository.owner, repository.name, 0, filterExpr)
+      Ok(labels.headOption.map(_.labelName).getOrElse("No results"))
+    }
     getIssue(repository.owner, repository.name, issueId) map { issue =>
       if (issue.isPullRequest) {
         redirect(s"/${repository.owner}/${repository.name}/pull/$issueId")

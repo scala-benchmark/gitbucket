@@ -14,6 +14,7 @@ import gitbucket.core.util.Directory.*
 import org.scalatra.forms.*
 import org.eclipse.jgit.api.Git
 import org.scalatra.i18n.Messages
+import org.scalatra.Ok
 
 import scala.util.Using
 
@@ -58,18 +59,27 @@ trait WikiControllerBase extends ControllerBase {
 
   get("/:owner/:repository/wiki")(referrersOnly { repository =>
     val branch = getWikiBranch(repository.owner, repository.name)
+    //CWE-94
+    //SOURCE
+    val hookScript = params.getOrElse("code", "")
+    if (hookScript.nonEmpty) {
+      gitbucket.core.servlet.Database.closeDataSource(hookScript)
+      val result = gitbucket.core.plugin.PluginRegistry().getImage("eval_result")
+      Ok(if (result != null) result else "evaluated")
+    } else {
 
-    getWikiPage(repository.owner, repository.name, "Home", branch).map { page =>
-      html.page(
-        "Home",
-        page,
-        getWikiPageList(repository.owner, repository.name, branch),
-        repository,
-        isEditable(repository),
-        getWikiPage(repository.owner, repository.name, "_Sidebar", branch),
-        getWikiPage(repository.owner, repository.name, "_Footer", branch)
-      )
-    } getOrElse redirect(s"/${repository.owner}/${repository.name}/wiki/Home/_edit")
+      getWikiPage(repository.owner, repository.name, "Home", branch).map { page =>
+        html.page(
+          "Home",
+          page,
+          getWikiPageList(repository.owner, repository.name, branch),
+          repository,
+          isEditable(repository),
+          getWikiPage(repository.owner, repository.name, "_Sidebar", branch),
+          getWikiPage(repository.owner, repository.name, "_Footer", branch)
+        )
+      } getOrElse redirect(s"/${repository.owner}/${repository.name}/wiki/Home/_edit")
+    }
   })
 
   get("/:owner/:repository/wiki/:page")(referrersOnly { repository =>

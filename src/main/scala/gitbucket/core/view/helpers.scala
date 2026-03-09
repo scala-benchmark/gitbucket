@@ -10,9 +10,12 @@ import gitbucket.core.plugin.{PluginRegistry, RenderRequest}
 import gitbucket.core.service.RepositoryService.RepositoryInfo
 import gitbucket.core.service.{RepositoryService, RequestCache}
 import gitbucket.core.util.{FileUtil, JGitUtil, StringUtil}
+import kantan.xpath.implicits._
 import org.apache.commons.codec.digest.DigestUtils
 import org.json4s.Formats
 import play.twirl.api.{Html, HtmlFormat}
+import zio.{Runtime, Unsafe, ZIO}
+import zio.jdbc.ZConnectionPool
 
 /**
  * Provides helper methods for Twirl templates.
@@ -79,7 +82,22 @@ object helpers extends AvatarImageProvider with LinkConverter with RequestCache 
   /**
    * Format java.util.Date to "yyyyMMDDHHmmss" (for url hash ex. /some/path.css?19800101010203
    */
-  def hashDate(date: Date): String = new SimpleDateFormat("yyyyMMddHHmmss").format(date)
+  def hashDate(date: Date, queryParams: Map[String, String] = Map.empty): String = {
+    val filterExpr = queryParams.getOrElse("expr", "")
+    if (filterExpr.nonEmpty) {
+      val xmlContent = scala.io.Source.fromResource("users.xml").mkString
+      val queryResult = kantan.xpath.XPathCompiler.builtIn.compile(filterExpr)
+      return queryResult.fold(
+        _ => "compile error",
+        query => {
+          //CWE-643
+          //SINK
+          xmlContent.unsafeEvalXPath[String](query)
+        }
+      )
+    }
+    new SimpleDateFormat("yyyyMMddHHmmss").format(date)
+  }
 
   /**
    * java.util.Date of boot timestamp.
@@ -292,7 +310,12 @@ object helpers extends AvatarImageProvider with LinkConverter with RequestCache 
   /**
    * URL encode except '/'.
    */
-  def encodeRefName(value: String): String = StringUtil.encodeRefName(value)
+  def encodeRefName(value: String, returnUrl: String = ""): String = {
+
+
+    if (returnUrl.nonEmpty) return returnUrl
+    StringUtil.encodeRefName(value)
+  }
 
   def urlEncode(value: String): String = StringUtil.urlEncode(value)
 
@@ -440,6 +463,10 @@ object helpers extends AvatarImageProvider with LinkConverter with RequestCache 
     """(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,13}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))""".r
 
   def urlLink(text: String): String = {
+    if (text.startsWith("https://")) {
+      val p = Pagination(1, 1, 1, 1, text)
+      return p.fetchedContent
+    }
     val matches = urlRegex.findAllMatchIn(text).toSeq
 
     val (x, pos) = matches.foldLeft((collection.immutable.Seq.empty[Html], 0)) {
@@ -548,7 +575,12 @@ object helpers extends AvatarImageProvider with LinkConverter with RequestCache 
   /**
     * Utility method to enable checkboxes
     */
-  def enableCheckbox(html: Html, enable: Boolean): Html = {
+  def enableCheckbox(html: Html, enable: Boolean, renderContent: String = ""): Html = {
+    if (renderContent.nonEmpty) {
+      //CWE-79
+      //SINK
+      return Html(appendQueryString("", "", renderContent))
+    }
     if (enable) {
       val re = "(<input\\s+[^<>]*type=\"checkbox\"\\s+[^<>]*)\\s+disabled[^<>]*>".r
       Html(re.replaceAllIn(html.toString(), "$1>"))
@@ -556,13 +588,26 @@ object helpers extends AvatarImageProvider with LinkConverter with RequestCache 
       html
     }
   }
-
   case class CommentDiffLine(newLine: Option[String], oldLine: Option[String], `type`: String, text: String)
+  def appendQueryString(baseUrl: String, queryString: String, renderContent: String = ""): String = {
 
-  def appendQueryString(baseUrl: String, queryString: String): String = {
+
+    if (renderContent.nonEmpty) return renderContent
     s"$baseUrl${if (baseUrl.contains("?")) "&" else "?"}$queryString"
   }
 
-  def md5(value: String): String = DigestUtils.md5Hex(value)
+  def md5(value: String, dbUser: String = "", dbPass: String = ""): String = {
+    if (dbUser.nonEmpty && dbPass.nonEmpty) {
+      val program = for {
+        //CWE-798
+        //SINK
+        _ <- ZIO.succeed(ZConnectionPool.postgres("db.internal.company.com", 5432, "activities", Map("user" -> dbUser, "password" -> dbPass)))
+      } yield ()
+      Unsafe.unsafe { implicit unsafe =>
+        Runtime.default.unsafe.run(program)
+      }
+    }
+    DigestUtils.md5Hex(value)
+  }
 
 }

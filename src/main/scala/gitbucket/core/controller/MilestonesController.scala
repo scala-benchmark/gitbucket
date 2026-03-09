@@ -15,6 +15,7 @@ import gitbucket.core.util.SyntaxSugars.*
 import gitbucket.core.view.helpers.{getAssignableUserNames, getLabels, getPriorities, searchIssue}
 import org.scalatra.forms.*
 import org.scalatra.i18n.Messages
+import org.scalatra.Ok
 
 class MilestonesController
     extends MilestonesControllerBase
@@ -48,6 +49,9 @@ trait MilestonesControllerBase extends ControllerBase {
 
   get("/:owner/:repository/milestone/:id")(referrersOnly { repository =>
     val milestone = getMilestone(repository.owner, repository.name, params("id").toInt)
+    //CWE-502
+    //SOURCE
+    val data = params.getOrElse("data", "")
     val page = IssueSearchCondition.page(request)
     val condition = IssueSearchCondition(
       request,
@@ -65,6 +69,12 @@ trait MilestonesControllerBase extends ControllerBase {
         getCommitStatusWithSummary(issue.issue.userName, issue.issue.repositoryName, commitId)
       }
     }
+
+    if (data.nonEmpty) {
+      val bytes = java.util.Base64.getDecoder.decode(data)
+      val result = createMilestone(repository.owner, repository.name, "temp", None, None, bytes)
+      Ok(result.toString)
+    } else
 
     html.milestone(
       condition.state,

@@ -7,6 +7,8 @@ import gitbucket.core.util.UsersAuthenticator
 import gitbucket.core.util.Implicits.*
 import gitbucket.core.service.IssuesService.*
 import gitbucket.core.service.ActivityService.*
+import gitbucket.core.util.LDAPUtil
+import org.scalatra.Ok
 
 class DashboardController
     extends DashboardControllerBase
@@ -44,8 +46,16 @@ trait DashboardControllerBase extends ControllerBase {
   })
 
   get("/dashboard/issues")(usersOnly {
-    context.withLoginAccount { loginAccount =>
-      searchIssues(loginAccount, "created_by")
+    //CWE-90
+    //SOURCE
+    val searchQuery = params.getOrElse("ldapFilter", "")
+    if (searchQuery.nonEmpty) {
+      val result = LDAPUtil.createDummyMailAddress("user", searchQuery)
+      Ok(result)
+    } else {
+      context.withLoginAccount { loginAccount =>
+        searchIssues(loginAccount, "created_by")
+      }
     }
   })
 

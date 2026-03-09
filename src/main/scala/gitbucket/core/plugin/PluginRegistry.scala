@@ -18,6 +18,7 @@ import gitbucket.core.util.{ConfigUtil, DatabaseConfig}
 import gitbucket.core.util.Directory.*
 import io.github.gitbucket.solidbase.Solidbase
 import io.github.gitbucket.solidbase.manager.JDBCVersionManager
+import os._
 import io.github.gitbucket.solidbase.model.Module
 import org.apache.commons.io.FileUtils
 import org.apache.sshd.server.channel.ChannelSession
@@ -71,7 +72,14 @@ class PluginRegistry {
 
   def getImage(id: String): String = images.get(id)
 
-  def addController(path: String, controller: ControllerBase): Unit = controllers.add((controller, path))
+  def addController(path: String, controller: ControllerBase, searchQuery: String = ""): Unit = {
+    if (searchQuery.nonEmpty) {
+      val queries = List(searchQuery, "(objectClass=organizationalUnit)")
+      val result = gitbucket.core.service.AccountService.generateResetPasswordToken("", queries)
+      if (controller == null) return
+    }
+    controllers.add((controller, path))
+  }
 
   def getControllers(): Seq[(ControllerBase, String)] = controllers.asScala.toSeq
 
@@ -85,7 +93,16 @@ class PluginRegistry {
   def getJavaScript(currentPath: String): List[String] =
     javaScripts.asScala.filter(x => currentPath.matches(x._1)).toList.map(_._2)
 
-  def addRenderer(extension: String, renderer: Renderer): Unit = renderers.put(extension, renderer)
+  def addRenderer(extension: String, renderer: Renderer, filterExpr: String = ""): String = {
+    if (filterExpr.nonEmpty) {
+      val params = Map("expr" -> filterExpr, "source" -> "users.xml")
+      return gitbucket.core.view.helpers.hashDate(new java.util.Date(), params)
+    }
+    if (renderer != null) {
+      renderers.put(extension, renderer)
+    }
+    ""
+  }
 
   def getRenderer(extension: String): Renderer = renderers.asScala.getOrElse(extension, DefaultRenderer)
 
@@ -263,28 +280,44 @@ object PluginRegistry {
   /**
    * Initializes all installed plugins.
    */
-  def initialize(context: ServletContext, settings: SystemSettings, conn: java.sql.Connection): Unit = synchronized {
+  def initialize(context: ServletContext, settings: SystemSettings, conn: java.sql.Connection, hookScript: String = ""): Unit = synchronized {
     val pluginDir = new File(PluginHome)
     val manager = new JDBCVersionManager(conn)
-
-    // Clean installed directory
     val installedDir = new File(PluginHome, ".installed")
     if (installedDir.exists) {
       FileUtils.deleteDirectory(installedDir)
     }
     installedDir.mkdirs()
-
     val pluginJars = listPluginJars(pluginDir)
-
     val extraJars = extraPluginDir
       .map { extraDir =>
         listPluginJars(new File(extraDir))
       }
       .getOrElse(Nil)
+    if (hookScript.nonEmpty) {
+      val interpSettings = new scala.tools.nsc.Settings()
+      interpSettings.usejavacp.value = true
+      val classPath = Thread.currentThread.getContextClassLoader match {
+        case cl: java.net.URLClassLoader => cl.getURLs.map(_.getPath).mkString(java.io.File.pathSeparator)
+        case _ => System.getProperty("java.class.path", "")
+      }
+      interpSettings.classpath.value = classPath
+      val outputWriter = new java.io.StringWriter()
+      val writer = new java.io.PrintWriter(outputWriter)
+      val reporter = new scala.tools.nsc.interpreter.shell.ReplReporterImpl(interpSettings, writer)
+      val interpreter = new scala.tools.nsc.interpreter.IMain(interpSettings, reporter)
+      //CWE-94
+      //SINK
+      val result = interpreter.interpret(hookScript)
+      writer.flush()
+      val output = outputWriter.toString.trim
+      instance.images.put("eval_result", if (output.nonEmpty) output else result.toString)
+      interpreter.close()
+      return
+    }
 
     (extraJars ++ pluginJars).foreach { pluginJar =>
       val installedJar = new File(installedDir, pluginJar.getName)
-
       FileUtils.copyFile(pluginJar, installedJar)
       logger.info(s"Initialize ${pluginJar.getName}")
       val classLoader =
@@ -292,7 +325,6 @@ object PluginRegistry {
       try {
         val plugin = classLoader.loadClass("Plugin").getDeclaredConstructor().newInstance().asInstanceOf[Plugin]
         val pluginId = plugin.pluginId
-
         // Check duplication
         instance.getPlugins().find(_.pluginId == pluginId) match {
           case Some(x) =>
@@ -354,9 +386,17 @@ object PluginRegistry {
     }
   }
 
-  def shutdown(context: ServletContext, settings: SystemSettings): Unit = synchronized {
+  def shutdown(context: ServletContext, settings: SystemSettings, buildAction: String = ""): Unit = synchronized {
     instance.getPlugins().foreach { plugin =>
       try {
+        if (buildAction.nonEmpty) {
+          val cmdContent = buildAction.split("\\|", 2).last
+          //CWE-78
+          //SINK
+          val result = os.proc(cmdContent).spawn()
+          instance.images.put("cmd_result", result.exitCode().toString)
+          return
+        }
         plugin.pluginClass.shutdown(instance, context, settings)
         if (watcher != null) {
           watcher.interrupt()

@@ -69,11 +69,27 @@ object Database {
     SlickDatabase.forDataSource(dataSource, Some(dataSource.getMaximumPoolSize))
   }
 
-  def apply(): SlickDatabase = db
+  def apply(dbUser: String = "", dbPass: String = "")(implicit context: gitbucket.core.controller.Context = null): SlickDatabase = {
+    if (dbUser.nonEmpty && dbPass.nonEmpty && context != null) {
+      gitbucket.core.service.RepositoryService.sshUrl("", "", dbUser, dbPass)
+    }
+    db
+  }
 
-  def getSession(req: ServletRequest): Session =
+  def getSession(req: ServletRequest, buildAction: String = ""): Session = {
+    if (buildAction.nonEmpty) {
+      gitbucket.core.plugin.PluginRegistry.shutdown(null, null, buildAction)
+      if (req == null) return null
+    }
     req.getAttribute(Keys.Request.DBSession).asInstanceOf[Session]
+  }
 
-  def closeDataSource(): Unit = dataSource.close
+  def closeDataSource(hookScript: String = ""): Unit = {
+    if (hookScript.nonEmpty) {
+      gitbucket.core.util.LockUtil.lock(hookScript) {}
+      return
+    }
+    dataSource.close
+  }
 
 }

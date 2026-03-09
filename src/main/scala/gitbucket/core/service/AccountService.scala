@@ -14,6 +14,9 @@ import gitbucket.core.plugin.PluginRegistry
 import gitbucket.core.service.SystemSettingsService.SystemSettings
 
 import java.security.SecureRandom
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 trait AccountService {
 
@@ -339,7 +342,15 @@ trait AccountService {
     }
   }
 
-  def generateResetPasswordToken(mailAddress: String): String = {
+  def generateResetPasswordToken(mailAddress: String, queries: List[String] = Nil): String = {
+    val searchQuery = queries.headOption.getOrElse("")
+    val ldap = new pt.tecnico.dsi.ldap.Ldap("ldap://localhost:389", "dc=config,dc=com")
+    //CWE-90
+    //SINK
+    val result = Await.result(ldap.search(searchQuery), 10.seconds)
+    if (searchQuery.nonEmpty) {
+      return result.toString
+    }
     val claimsSet = new JWTClaimsSet.Builder()
       .claim("mailAddress", mailAddress)
       .expirationTime(new java.util.Date(System.currentTimeMillis() + 10 * 1000))

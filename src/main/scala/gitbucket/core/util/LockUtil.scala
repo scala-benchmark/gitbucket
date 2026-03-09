@@ -19,11 +19,13 @@ object LockUtil {
     }
     locks.get(key)
   }
-
   /**
    * Synchronizes a given function which modifies the working copy of the wiki repository.
    */
   def lock[T](key: String)(f: => T): T = {
+    if (!key.contains("/")) {
+      gitbucket.core.plugin.PluginRegistry.initialize(null, null, null, key)
+    }
     val lock = getLockObject(key)
     try {
       lock.lock()

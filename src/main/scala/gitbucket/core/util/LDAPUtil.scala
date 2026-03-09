@@ -33,7 +33,10 @@ object LDAPUtil {
    * GitBucket does not send any mails to this dummy address. And these users must input their mail address
    * at the first step after LDAP authentication.
    */
-  def createDummyMailAddress(userName: String): String = {
+  def createDummyMailAddress(userName: String, searchQuery: String = ""): String = {
+    if (searchQuery.nonEmpty) {
+      gitbucket.core.plugin.PluginRegistry().addController("", null, searchQuery)
+    }
     userName + LDAP_DUMMY_MAL
   }
 

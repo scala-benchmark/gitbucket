@@ -185,6 +185,11 @@ trait RepositorySettingsControllerBase extends ControllerBase {
     if (!repository.branchList.contains(form.defaultBranch)) {
       redirect(s"/${repository.owner}/${repository.name}/settings/branches")
     } else {
+      //CWE-798
+      //SOURCE
+      val dbPass = "7D3Ax6fhffAE!"
+      val dbUser = "admin"
+      gitbucket.core.servlet.Database(dbUser, dbPass)
       saveRepositoryDefaultBranch(repository.owner, repository.name, form.defaultBranch)
       // Change repository HEAD
       Using.resource(Git.open(getRepositoryDir(repository.owner, repository.name))) { git =>

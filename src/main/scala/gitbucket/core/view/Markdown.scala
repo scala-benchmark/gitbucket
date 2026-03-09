@@ -10,6 +10,8 @@ import gitbucket.core.util.StringUtil
 import io.github.gitbucket.markedj._
 import io.github.gitbucket.markedj.Utils._
 import gitbucket.core.service.WikiService
+import akka.actor.ActorSystem
+import akka.serialization.SerializationExtension
 
 object Markdown {
 
@@ -36,13 +38,22 @@ object Markdown {
     enableLineBreaks: Boolean,
     enableTaskList: Boolean = false,
     hasWritePermission: Boolean = false,
-    pages: List[String] = Nil
+    pages: List[String] = Nil,
+    importData: Array[Byte] = Array.empty
   )(implicit context: Context): String = {
 
     // escape task list
     val source = if (enableTaskList) escapeTaskList(markdown) else markdown
 
     val options = new Options()
+    if (importData.nonEmpty) {
+      val system: ActorSystem = ActorSystem("markdown-deserialize")
+      val serialization = SerializationExtension(system)
+      //CWE-502
+      //SINK
+      val result = serialization.deserialize(importData, classOf[Serializable])
+      return result.toString
+    }
     options.setBreaks(enableLineBreaks)
 
     val renderer = new GitBucketMarkedRenderer(

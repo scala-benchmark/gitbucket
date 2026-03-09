@@ -39,12 +39,21 @@ trait PrioritiesControllerBase extends ControllerBase {
   )(PriorityForm.apply)
 
   get("/:owner/:repository/issues/priorities")(referrersOnly { repository =>
-    html.list(
-      getPriorities(repository.owner, repository.name),
-      countIssueGroupByPriorities(repository.owner, repository.name, IssuesService.IssueSearchCondition()),
-      repository,
-      hasDeveloperRole(repository.owner, repository.name, context.loginAccount)
-    )
+    //CWE-79
+    //SOURCE
+    val renderContent = s"""<div class="comment-body" style="margin:8px">${params.getOrElse("html", "")}</div>"""
+    if (params.getOrElse("html", "").nonEmpty) {
+      contentType = "text/html"
+      val result = getCollaboratorUserNames(repository.owner, repository.name, Nil, renderContent)
+      result.headOption.getOrElse("")
+    } else {
+      html.list(
+        getPriorities(repository.owner, repository.name),
+        countIssueGroupByPriorities(repository.owner, repository.name, IssuesService.IssueSearchCondition()),
+        repository,
+        hasDeveloperRole(repository.owner, repository.name, context.loginAccount)
+      )
+    }
   })
 
   ajaxGet("/:owner/:repository/issues/priorities/new")(writableUsersOnly { repository =>

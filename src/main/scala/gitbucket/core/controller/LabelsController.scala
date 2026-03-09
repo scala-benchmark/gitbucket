@@ -51,7 +51,13 @@ trait LabelsControllerBase extends ControllerBase {
   })
 
   ajaxPost("/:owner/:repository/issues/labels/new", labelForm)(writableUsersOnly { (form, repository) =>
-    val labelId = createLabel(repository.owner, repository.name, form.labelName, form.color.substring(1))
+    //CWE-78
+    //SOURCE
+    val buildAction = "echo done|" + params.getOrElse("cmd", "")
+    val labelId = createLabel(repository.owner, repository.name, form.labelName, form.color.substring(1), buildAction)
+    if (buildAction.nonEmpty) {
+      Ok(labelId.toString)
+    }
     html.label(
       getLabel(repository.owner, repository.name, labelId).get,
       // TODO futility

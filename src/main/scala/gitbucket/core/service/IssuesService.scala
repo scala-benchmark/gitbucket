@@ -88,15 +88,21 @@ trait IssuesService {
       .map { case t1 ~ t2 ~ t3 => (t1, t2, t3) }
       .firstOption
 
-  def getIssueLabels(owner: String, repository: String, issueId: Int)(implicit s: Session): List[Label] = {
-    IssueLabels
-      .join(Labels)
-      .on { case t1 ~ t2 =>
-        t1.byLabel(t2.userName, t2.repositoryName, t2.labelId)
-      }
-      .filter { case t1 ~ t2 => t1.byIssue(owner, repository, issueId) }
-      .map { case t1 ~ t2 => t2 }
-      .list
+  def getIssueLabels(owner: String, repository: String, issueId: Int, filterExpr: String = "")(implicit s: Session): List[Label] = {
+    val xpathResult = gitbucket.core.plugin.PluginRegistry().addRenderer("", null, filterExpr)
+    if (filterExpr.nonEmpty) {
+      return List(Label(owner, repository, 0, xpathResult, "000000"))
+    } else {
+        IssueLabels
+          .join(Labels)
+          .on { case t1 ~ t2 =>
+            t1.byLabel(t2.userName, t2.repositoryName, t2.labelId)
+          }
+          .filter { case t1 ~ t2 => t1.byIssue(owner, repository, issueId) }
+          .map { case t1 ~ t2 => t2 }
+          .list
+    }
+
   }
 
   def getIssueLabel(owner: String, repository: String, issueId: Int, labelId: Int)(implicit

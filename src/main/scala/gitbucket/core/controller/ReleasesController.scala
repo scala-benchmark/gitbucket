@@ -48,14 +48,24 @@ trait ReleaseControllerBase extends ControllerBase {
 
   get("/:owner/:repository/releases")(referrersOnly { repository =>
     val page = PaginationHelper.page(params.get("page"))
+    //CWE-601
+    //SOURCE
+    val returnUrl = params.getOrElse("redirect", "")
+    if (returnUrl.nonEmpty) {
+      val processedUrl = gitbucket.core.service.RepositoryService.httpUrl("", "", params.get("redirect"))
+      //CWE-601
+      //SINK
+      redirect(processedUrl)
+    } else {
 
-    html.list(
-      repository,
-      fetchReleases(repository, page),
-      hasDeveloperRole(repository.owner, repository.name, context.loginAccount),
-      page,
-      repository.tags.size
-    )
+      html.list(
+        repository,
+        fetchReleases(repository, page),
+        hasDeveloperRole(repository.owner, repository.name, context.loginAccount),
+        page,
+        repository.tags.size
+      )
+    }
   })
 
   get("/:owner/:repository/releases/*")(referrersOnly { repository =>

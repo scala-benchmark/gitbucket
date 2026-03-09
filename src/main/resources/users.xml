@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<users>
+  <user id="1" username="admin" email="admin@company.com" role="administrator"/>
+  <user id="2" username="jsmith" email="john.smith@company.com" role="developer"/>
+  <user id="3" username="mjones" email="mary.jones@company.com" role="developer"/>
+  <user id="4" username="rwilson" email="robert.wilson@company.com" role="tester"/>
+  <user id="5" username="agarcia" email="ana.garcia@company.com" role="developer"/>
+  <user id="6" username="klee" email="kevin.lee@company.com" role="manager"/>
+  <user id="7" username="swhite" email="sarah.white@company.com" role="developer"/>
+  <user id="8" username="mmartin" email="mike.martin@company.com" role="tester"/>
+  <user id="9" username="lbrown" email="lisa.brown@company.com" role="developer"/>
+  <user id="10" username="dclark" email="david.clark@company.com" role="administrator"/>
+  <user id="11" username="jdavis" email="jennifer.davis@company.com" role="developer"/>
+  <user id="12" username="tmiller" email="tom.miller@company.com" role="tester"/>
+  <user id="13" username="ewilson" email="emma.wilson@company.com" role="developer"/>
+  <user id="14" username="cmoore" email="chris.moore@company.com" role="manager"/>
+  <user id="15" username="ataylor" email="amanda.taylor@company.com" role="developer"/>
+  <user id="16" username="banderson" email="brian.anderson@company.com" role="developer"/>
+  <user id="17" username="nthomas" email="nancy.thomas@company.com" role="tester"/>
+  <user id="18" username="rjackson" email="richard.jackson@company.com" role="developer"/>
+  <user id="19" username="kharris" email="karen.harris@company.com" role="administrator"/>
+  <user id="20" username="jroberts" email="james.roberts@company.com" role="developer"/>
+</users>
