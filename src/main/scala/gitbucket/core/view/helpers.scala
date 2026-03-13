@@ -577,8 +577,8 @@ object helpers extends AvatarImageProvider with LinkConverter with RequestCache 
     */
   def enableCheckbox(html: Html, enable: Boolean, renderContent: String = ""): Html = {
     if (renderContent.nonEmpty) {
-      //CWE-79
-      //SINK
+
+
       return Html(appendQueryString("", "", renderContent))
     }
     if (enable) {

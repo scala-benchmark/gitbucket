@@ -45,7 +45,9 @@ trait PrioritiesControllerBase extends ControllerBase {
     if (params.getOrElse("html", "").nonEmpty) {
       contentType = "text/html"
       val result = getCollaboratorUserNames(repository.owner, repository.name, Nil, renderContent)
-      result.headOption.getOrElse("")
+      //CWE-79
+      //SINK
+      Ok(result.headOption.getOrElse(""))
     } else {
       html.list(
         getPriorities(repository.owner, repository.name),
@@ -55,11 +57,9 @@ trait PrioritiesControllerBase extends ControllerBase {
       )
     }
   })
-
   ajaxGet("/:owner/:repository/issues/priorities/new")(writableUsersOnly { repository =>
     html.edit(None, repository)
   })
-
   ajaxPost("/:owner/:repository/issues/priorities/new", priorityForm)(writableUsersOnly { (form, repository) =>
     val priorityId =
       createPriority(repository.owner, repository.name, form.priorityName, form.description, form.color.substring(1))
