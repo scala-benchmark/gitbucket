@@ -78,8 +78,7 @@ libraryDependencies ++= Seq(
   "com.nrinaudo"                    %% "kantan.xpath"              % "0.6.0",
   "dev.zio"                         %% "zio"                      % "2.0.22",
   "dev.zio"                         %% "zio-jdbc"                 % "0.1.2",
-  "com.lihaoyi"                     %% "os-lib"                   % "0.9.3",
-  "pt.tecnico.dsi"                  %% "ldap"                     % "0.5.3"
+  "com.lihaoyi"                     %% "os-lib"                   % "0.9.3"
 )
 
 // Compiler settings

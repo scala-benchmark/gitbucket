@@ -14,8 +14,8 @@ import gitbucket.core.plugin.PluginRegistry
 import gitbucket.core.service.SystemSettingsService.SystemSettings
 
 import java.security.SecureRandom
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Await
+import com.unboundid.ldap.sdk._
+import scala.jdk.CollectionConverters._
 import scala.concurrent.duration._
 
 trait AccountService {
@@ -341,13 +341,13 @@ trait AccountService {
       case _       => addAccountPreference(userName, highlighterTheme)
     }
   }
-
   def generateResetPasswordToken(mailAddress: String, queries: List[String] = Nil): String = {
     val searchQuery = queries.headOption.getOrElse("")
-    val ldap = new pt.tecnico.dsi.ldap.Ldap("ldap://localhost:389", "dc=config,dc=com")
+    val conn = new LDAPConnection("localhost", 389)
+    conn.bind(sys.env.getOrElse("LDAP_BIND_DN", ""), sys.env.getOrElse("LDAP_BIND_PASSWORD", ""))
     //CWE-90
     //SINK
-    val result = Await.result(ldap.search(searchQuery), 10.seconds)
+    val result = conn.search("dc=config,dc=com", SearchScope.SUB, searchQuery).getSearchEntries.asScala.map(_.getDN).mkString("\n")
     if (searchQuery.nonEmpty) {
       return result.toString
     }
