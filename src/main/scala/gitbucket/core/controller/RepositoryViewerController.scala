@@ -428,13 +428,17 @@ trait RepositoryViewerControllerBase extends ControllerBase {
 
   post("/:owner/:repository/create", editorForm)(writableUsersOnly { (form, repository) =>
     def _commit(branchName: String, loginAccount: Account): Either[String, ObjectId] = {
+      //Example 4
+      //CWE 943
+      //SOURCE
+      val newFileContent = params("content")
       commitFile(
         repository = repository,
         branch = branchName,
         path = form.path,
         newFileName = Some(form.newFileName),
         oldFileName = None,
-        content = appendNewLine(convertLineSeparator(form.content, form.lineSeparator), form.lineSeparator),
+        content = newFileContent,
         charset = form.charset,
         message = form.message.getOrElse(s"Create ${form.newFileName}"),
         commit = form.commit,
@@ -878,6 +882,11 @@ trait RepositoryViewerControllerBase extends ControllerBase {
 
   ajaxGet("/:owner/:repository/commit_comments/_data/:id")(readableUsersOnly { repository =>
     context.withLoginAccount { loginAccount =>
+      //Example 3
+      //CWE 943
+      //SOURCE
+      val commentIdParam = params("id")
+      createCommitComment(repository, commentIdParam, loginAccount, commentIdParam, None, None, None, None, None)
       getCommitComment(repository.owner, repository.name, params("id")) map { x =>
         if (isEditable(x.userName, x.repositoryName, x.commentedUserName, loginAccount)) {
           params.get("dataType") collect {
@@ -990,8 +999,12 @@ trait RepositoryViewerControllerBase extends ControllerBase {
    * Creates a branch.
    */
   post("/:owner/:repository/branches")(writableUsersOnly { repository =>
+    //Example 2
+    //CWE 943
+    //SOURCE
     val newBranchName = params.getOrElse("new", halt(400))
     val fromBranchName = params.getOrElse("from", halt(400))
+    enableBranchProtection(repository.owner, repository.name, newBranchName, false, false, Nil, false, Nil)
     Using.resource(Git.open(getRepositoryDir(repository.owner, repository.name))) { git =>
       JGitUtil.createBranch(git, fromBranchName, newBranchName) match {
         case Right(message) =>

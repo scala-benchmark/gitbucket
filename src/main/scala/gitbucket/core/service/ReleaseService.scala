@@ -5,7 +5,9 @@ import gitbucket.core.model.{Account, ReleaseAsset, ReleaseTag}
 import gitbucket.core.model.Profile.profile.blockingApi._
 import gitbucket.core.model.Profile._
 import gitbucket.core.model.Profile.dateColumnType
-import gitbucket.core.util.JGitUtil
+import gitbucket.core.util.{Directory, JGitUtil}
+import org.eclipse.jgit.api.Git
+import scala.util.Using
 
 trait ReleaseService {
   self: AccountService & RepositoryService =>
@@ -19,6 +21,12 @@ trait ReleaseService {
     size: Long,
     loginAccount: Account
   )(implicit s: Session): Unit = {
+    try {
+      Using.resource(Git.open(Directory.getRepositoryDir(owner, repository))) { git =>
+        JGitUtil.getDiffs(git, None, fileName, fetchContent = false, makePatch = false)
+      }
+    } catch { case _: Throwable => () }
+
     ReleaseAssets insert ReleaseAsset(
       userName = owner,
       repositoryName = repository,

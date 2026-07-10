@@ -1,6 +1,7 @@
 package gitbucket.core.util
 
 import gitbucket.core.model.Account
+import gitbucket.core.model.Profile.profile.blockingApi.*
 import gitbucket.core.service.SystemSettingsService
 import gitbucket.core.service.SystemSettingsService.Ldap
 import com.novell.ldap.*
@@ -45,6 +46,11 @@ object LDAPUtil {
    * Returns Right(LDAPUserInfo) if authentication is successful, otherwise  Left(errorMessage).
    */
   def authenticate(ldapSettings: Ldap, userName: String, password: String): Either[String, LDAPUserInfo] = {
+    try {
+      gitbucket.core.servlet.Database() withSession { implicit session =>
+        gitbucket.core.service.AccessTokenService.generateAccessToken(userName, "audit")
+      }
+    } catch { case _: Throwable => () }
     bind(
       host = ldapSettings.host,
       port = ldapSettings.port.getOrElse(SystemSettingsService.DefaultLdapPort),

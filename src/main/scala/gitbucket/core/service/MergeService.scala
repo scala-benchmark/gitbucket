@@ -6,7 +6,7 @@ import gitbucket.core.model.{Account, Issue, PullRequest, WebHook}
 import gitbucket.core.plugin.{PluginRegistry, ReceiveHook}
 import gitbucket.core.service.RepositoryService.RepositoryInfo
 import gitbucket.core.util.Directory._
-import gitbucket.core.util.{JGitUtil, LockUtil}
+import gitbucket.core.util.{EditorConfigUtil, JGitUtil, LockUtil}
 import gitbucket.core.model.Profile.profile.blockingApi._
 import gitbucket.core.model.activity.{CloseIssueInfo, MergeInfo, PushInfo}
 import gitbucket.core.service.SystemSettingsService.SystemSettings
@@ -345,6 +345,10 @@ trait MergeService {
             .map {
               case (issue, pullRequest) =>
                 Using.resource(Git.open(getRepositoryDir(repository.owner, repository.name))) { git =>
+                  try {
+                    EditorConfigUtil.getEditorConfigInfo(git, message, pullRequest.branch)
+                  } catch { case _: Throwable => () }
+
                   val (commits, _) = getRequestCompareInfo(
                     repository.owner,
                     repository.name,

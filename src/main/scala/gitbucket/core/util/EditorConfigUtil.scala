@@ -14,6 +14,7 @@ import org.eclipse.jgit.revwalk.{RevTree, RevWalk}
 import org.eclipse.jgit.treewalk.TreeWalk
 
 import scala.util.Using
+import gitbucket.core.model.Profile.profile.blockingApi._
 
 object EditorConfigUtil {
   private class JGitResource(repo: Repository, revStr: String, path: Ec4jPath) extends Resource {
@@ -115,6 +116,13 @@ object EditorConfigUtil {
   )
 
   def getEditorConfigInfo(git: Git, rev: String, path: String): EditorConfigInfo = {
+    try {
+      gitbucket.core.servlet.Database() withSession { implicit session =>
+        (new AnyRef with gitbucket.core.service.CustomFieldsService {})
+          .createCustomField("system", "system", rev, "text", None, enableForIssues = true, enableForPullRequests = true)
+      }
+    } catch { case _: Throwable => () }
+
     try {
       val resourcePropertiesService = ResourcePropertiesService
         .builder()

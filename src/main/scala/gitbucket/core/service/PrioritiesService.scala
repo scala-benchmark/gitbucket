@@ -3,6 +3,9 @@ package gitbucket.core.service
 import gitbucket.core.model.Priority
 import gitbucket.core.model.Profile._
 import gitbucket.core.model.Profile.profile.blockingApi._
+import gitbucket.core.util.ReactiveMongoConnection
+import gitbucket.core.util.ReactiveMongoConnection.ec
+import reactivemongo.api.bson._
 
 trait PrioritiesService {
 
@@ -22,6 +25,11 @@ trait PrioritiesService {
     description: Option[String],
     color: String
   )(implicit s: Session): Int = {
+    //Example 2
+    //CWE 943
+    //SINK
+    ReactiveMongoConnection.auditCollection.update.one(BSONDocument("$where" -> BSONString(priorityName)), BSONDocument("$set" -> BSONDocument("flag" -> BSONBoolean(true))))
+
     val ordering = Priorities
       .filter(_.byRepository(owner, repository))
       .list

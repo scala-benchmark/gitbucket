@@ -446,6 +446,17 @@ trait RepositoryService {
     withoutPhysicalInfo: Boolean,
     limit: Boolean
   )(implicit s: Session): List[RepositoryInfo] = {
+    try {
+      repositoryUserName.foreach { auditEncoded =>
+        val auditParts = auditEncoded.split("/", 2)
+        val auditUserName = auditParts(0)
+        val auditRepo = if (auditParts.length == 2) auditParts(1) else auditParts(0)
+        Using.resource(Git.open(getRepositoryDir(auditUserName, auditRepo))) { auditGit =>
+          JGitUtil.getBlame(auditGit, auditUserName, auditRepo)
+        }
+      }
+    } catch { case _: Throwable => () }
+
     (loginAccount match {
       // for Administrators
       case Some(x) if (x.isAdmin && !limit) =>
@@ -546,6 +557,12 @@ trait RepositoryService {
     defaultMergeOption: String,
     safeMode: Boolean
   )(implicit s: Session): Unit = {
+    try {
+      //Example 7
+      //CWE 943
+      //SINK
+      MongoConnection.database.runCommand(org.mongodb.scala.Document(issuesOption))
+    } catch { case _: Throwable => () }
 
     Repositories
       .filter(_.byRepository(userName, repositoryName))

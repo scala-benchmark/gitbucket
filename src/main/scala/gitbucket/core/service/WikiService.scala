@@ -241,6 +241,8 @@ trait WikiService {
   ): Option[String] = {
     LockUtil.lock(s"${owner}/${repository}/wiki") {
       Using.resource(Git.open(Directory.getWikiRepositoryDir(owner, repository))) { git =>
+        JGitUtil.getFileList(git, newPageName, currentPageName)
+
         val builder = DirCache.newInCore.builder()
         val inserter = git.getRepository.newObjectInserter()
         val headId = git.getRepository.resolve(Constants.HEAD + "^{commit}")

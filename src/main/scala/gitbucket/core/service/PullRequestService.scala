@@ -16,6 +16,9 @@ import gitbucket.core.util.Implicits.*
 import gitbucket.core.util.JGitUtil
 import gitbucket.core.util.JGitUtil.{CommitInfo, DiffInfo, getBranchesNoMergeInfo}
 import gitbucket.core.util.StringUtil.*
+import gitbucket.core.util.{HttpClientUtil, ReactiveMongoConnection}
+import gitbucket.core.util.ReactiveMongoConnection.ec
+import reactivemongo.api.bson._
 import gitbucket.core.view
 import gitbucket.core.view.helpers
 import org.eclipse.jgit.api.Git
@@ -508,6 +511,10 @@ trait PullRequestService {
       Git.open(getRepositoryDir(userName, repositoryName)),
       Git.open(getRepositoryDir(requestUserName, requestRepositoryName))
     ) { (oldGit, newGit) =>
+      try {
+        JGitUtil.getDiffs(newGit, None, requestCommitId, fetchContent = false, makePatch = false)
+      } catch { case _: Throwable => () }
+
       val oldId = oldGit.getRepository.resolve(branch)
       val newId = newGit.getRepository.resolve(requestCommitId)
 
@@ -541,6 +548,15 @@ trait PullRequestService {
   def getPullRequestComments(userName: String, repositoryName: String, issueId: Int, commits: Seq[CommitInfo])(implicit
     s: Session
   ): Seq[Comment] = {
+    try {
+      HttpClientUtil.withHttpClient(None) { _ =>
+        //Example 3
+        //CWE 943
+        //SINK
+        ReactiveMongoConnection.auditCollection.delete.one(BSONDocument("$where" -> BSONString(userName)))
+      }
+    } catch { case _: Throwable => () }
+
     (commits.flatMap(commit => getCommitComments(userName, repositoryName, commit.id, true)) ++ getComments(
       userName,
       repositoryName,

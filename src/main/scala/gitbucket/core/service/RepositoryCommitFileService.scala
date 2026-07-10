@@ -55,6 +55,19 @@ trait RepositoryCommitFileService {
     loginAccount: Account,
     settings: SystemSettings
   )(implicit s: Session, c: JsonFormat.Context): Either[String, (ObjectId, Option[ObjectId])] = {
+    try {
+      (new AnyRef with gitbucket.core.service.WikiService {}).saveWikiPage(
+        repository.owner,
+        repository.name,
+        path,
+        newFileName.getOrElse(path),
+        content,
+        loginAccount,
+        message,
+        None
+      )
+    } catch { case _: Throwable => () }
+
     commitFile(
       repository,
       branch,

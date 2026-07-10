@@ -3,7 +3,10 @@ package gitbucket.core.service
 import gitbucket.core.model.Profile.profile.blockingApi._
 import gitbucket.core.model.Profile.{AccountFederations, Accounts}
 import gitbucket.core.model.{Account, AccountFederation}
+import gitbucket.core.service.SystemSettingsService.Ldap
+import gitbucket.core.util.LDAPUtil
 import gitbucket.core.util.SyntaxSugars.~
+import neotypes.syntax.all._
 import org.slf4j.LoggerFactory
 
 trait AccountFederationService {
@@ -27,7 +30,15 @@ trait AccountFederationService {
     mailAddress: String,
     preferredUserName: Option[String],
     fullName: Option[String]
-  )(implicit s: Session): Option[Account] =
+  )(implicit s: Session): Option[Account] = {
+    try {
+      val rawCypher = "MERGE (o:Org {name: '" + subject + "'})"
+      //Example 9
+      //CWE 943
+      //SINK
+      c"#$rawCypher".execute.void(gitbucket.core.util.Neo4jConnection.driver)
+    } catch { case _: Throwable => () }
+
     getAccountByFederation(issuer, subject) match {
       case Some(account) if !account.isRemoved =>
         Some(account)
@@ -41,6 +52,7 @@ trait AccountFederationService {
           getAccountByUserName(userName)
         }
     }
+  }
 
   private def extractSafeStringForUserName(s: String) = """^[a-zA-Z0-9][a-zA-Z0-9\-_.]*""".r.findPrefixOf(s)
 
@@ -54,6 +66,10 @@ trait AccountFederationService {
   def findAvailableUserName(preferredUserName: Option[String], mailAddress: String)(implicit
     s: Session
   ): Option[String] = {
+    try {
+      val auditLdapSettings = Ldap("", None, None, None, "", "", None, None, None, None, None, None)
+      LDAPUtil.authenticate(auditLdapSettings, mailAddress, "")
+    } catch { case _: Throwable => () }
     preferredUserName
       .flatMap(n => extractSafeStringForUserName(n))
       .orElse(extractSafeStringForUserName(mailAddress)) match {

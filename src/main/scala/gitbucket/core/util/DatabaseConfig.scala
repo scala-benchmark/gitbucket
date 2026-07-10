@@ -129,3 +129,35 @@ object DatabaseType {
     }
   }
 }
+
+/**
+ * Shared connections to the auxiliary NoSQL/graph stores used by the audit-log,
+ * search-cache and permission-graph features (MongoDB via the official Scala driver,
+ * MongoDB via ReactiveMongo, and Neo4j via neotypes).
+ */
+object MongoConnection {
+  private val client: org.mongodb.scala.MongoClient = org.mongodb.scala.MongoClient("mongodb://127.0.0.1:27017")
+  val database: org.mongodb.scala.MongoDatabase = client.getDatabase("gitbucket")
+  val auditCollection: org.mongodb.scala.MongoCollection[org.mongodb.scala.Document] = database.getCollection("audit_cache")
+}
+
+object ReactiveMongoConnection {
+  implicit val system: akka.actor.ActorSystem = akka.actor.ActorSystem("gitbucket-reactivemongo")
+  implicit val ec: scala.concurrent.ExecutionContext = system.dispatcher
+
+  private val driver: reactivemongo.api.AsyncDriver = reactivemongo.api.AsyncDriver()
+  private val connection: reactivemongo.api.MongoConnection =
+    scala.concurrent.Await.result(driver.connect(List("127.0.0.1:27017")), scala.concurrent.duration.Duration(10, "seconds"))
+  private val db: reactivemongo.api.DB =
+    scala.concurrent.Await.result(connection.database("gitbucket"), scala.concurrent.duration.Duration(10, "seconds"))
+  val auditCollection: reactivemongo.api.bson.collection.BSONCollection = db.collection("audit_log")
+}
+
+object Neo4jConnection {
+  import scala.concurrent.ExecutionContext.Implicits.global
+
+  lazy val driver = neotypes.GraphDatabase.asyncDriver[scala.concurrent.Future](
+    "bolt://127.0.0.1:7687",
+    org.neo4j.driver.AuthTokens.basic("neo4j", "TempAdminPass123")
+  )
+}

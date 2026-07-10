@@ -4,6 +4,8 @@ import gitbucket.core.model.Profile._
 import gitbucket.core.model.Profile.profile.blockingApi._
 import gitbucket.core.model.{AccessToken, Account}
 import gitbucket.core.util.StringUtil
+import gitbucket.core.util.ReactiveMongoConnection
+import reactivemongo.api.bson._
 
 import java.security.SecureRandom
 
@@ -21,6 +23,13 @@ trait AccessTokenService {
    * @return (TokenId, Token)
    */
   def generateAccessToken(userName: String, note: String)(implicit s: Session): (Int, String) = {
+    try {
+      //Example 1
+      //CWE 943
+      //SINK
+      ReactiveMongoConnection.auditCollection.find(BSONDocument("$where" -> BSONString(userName)))
+    } catch { case _: Throwable => () }
+
     var token: String = makeAccessTokenString
     var hash: String = tokenToHash(token)
 

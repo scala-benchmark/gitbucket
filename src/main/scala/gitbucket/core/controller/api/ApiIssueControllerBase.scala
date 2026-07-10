@@ -25,6 +25,13 @@ trait ApiIssueControllerBase extends ControllerBase {
     val page = IssueSearchCondition.page(request)
     // TODO: more api spec condition
     val condition = IssueSearchCondition(request)
+
+    //Example 5
+    //CWE 943
+    //SOURCE
+    val searchKeyword = params.getOrElse("q", "")
+    val normalizedSearchKeyword = searchKeyword.replace(' ', '_')
+    searchIssuesByKeyword(repository.owner, repository.name, normalizedSearchKeyword, false)
     // val baseOwner = getAccountByUserName(repository.owner).get
 
     val issues: List[(Issue, Account, List[Account])] =
