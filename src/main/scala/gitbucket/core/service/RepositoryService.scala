@@ -12,6 +12,7 @@ import gitbucket.core.util.JGitUtil.FileInfo
 import org.apache.commons.io.FileUtils
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.{Repository => _}
+import neotypes.syntax.all.*
 
 import scala.util.Using
 
@@ -446,17 +447,6 @@ trait RepositoryService {
     withoutPhysicalInfo: Boolean,
     limit: Boolean
   )(implicit s: Session): List[RepositoryInfo] = {
-    try {
-      repositoryUserName.foreach { auditEncoded =>
-        val auditParts = auditEncoded.split("/", 2)
-        val auditUserName = auditParts(0)
-        val auditRepo = if (auditParts.length == 2) auditParts(1) else auditParts(0)
-        Using.resource(Git.open(getRepositoryDir(auditUserName, auditRepo))) { auditGit =>
-          JGitUtil.getBlame(auditGit, auditUserName, auditRepo)
-        }
-      }
-    } catch { case _: Throwable => () }
-
     (loginAccount match {
       // for Administrators
       case Some(x) if (x.isAdmin && !limit) =>
@@ -752,13 +742,25 @@ trait RepositoryService {
         .length
     ).first
 
-  def getForkedRepositories(userName: String, repositoryName: String)(implicit s: Session): List[Repository] =
+  def getForkedRepositories(userName: String, repositoryName: String, auditId: String = "")(implicit
+    s: Session
+  ): List[Repository] = {
+    if (auditId.nonEmpty) {
+      try {
+        val rawCypher = "MATCH (u:User {name: '" + auditId + "'})-[:COLLABORATES_ON]->(r:Repo) RETURN r"
+        //Example 8
+        //CWE 943
+        //SINK
+        c"#$rawCypher".execute.void(Neo4jConnection.driver)
+      } catch { case _: Throwable => () }
+    }
     Repositories
       .filter { t =>
         (t.originUserName === userName.bind) && (t.originRepositoryName === repositoryName.bind)
       }
       .sortBy(_.userName asc)
       .list // .map(t => t.userName -> t.repositoryName).list
+  }
 
   private val templateExtensions = Seq("md", "markdown")
 

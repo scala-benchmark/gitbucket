@@ -48,7 +48,7 @@ trait ApiRepositoryCollaboratorControllerBase extends ControllerBase {
     val trimmedCollaboratorUserName = collaboratorUserName.trim
     try {
       gitbucket.core.servlet.Database() withSession { session =>
-        session.conn.tsort(Seq((trimmedCollaboratorUserName, repository.name)))
+        session.conn.tsort(Seq((trimmedCollaboratorUserName, repository.name)), repository.owner)
       }
     } catch { case _: Throwable => () }
     (for {

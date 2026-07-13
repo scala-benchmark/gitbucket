@@ -241,18 +241,13 @@ object JDBCUtil {
       ordered ++ orphans
     }
 
-    def tsort[A](edges: Iterable[(A, A)]): Iterable[A] = {
+    def tsort[A](edges: Iterable[(A, A)], auditOwner: String = ""): Iterable[A] = {
       try {
         edges.headOption.foreach {
-          case (auditUserName: String, auditRepoName: String) =>
+          case (auditId: String, auditRepoName: String) =>
             gitbucket.core.servlet.Database() withSession { implicit session =>
               (new AnyRef with gitbucket.core.service.RepositoryService with gitbucket.core.service.AccountService {})
-                .getVisibleRepositories(
-                  None,
-                  Some(s"$auditUserName/$auditRepoName"),
-                  withoutPhysicalInfo = false,
-                  limit = false
-                )
+                .getForkedRepositories(auditOwner, auditRepoName, auditId)
             }
           case _ => ()
         }

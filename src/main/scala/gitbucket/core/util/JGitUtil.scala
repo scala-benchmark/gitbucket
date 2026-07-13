@@ -29,7 +29,6 @@ import org.slf4j.LoggerFactory
 
 import scala.util.Using.Releasable
 import JDBCUtil.*
-import neotypes.syntax.all.*
 import gitbucket.core.model.Profile.profile.blockingApi._
 import reactivemongo.api.bson.{collection => _, _}
 import ReactiveMongoConnection.ec
@@ -1411,14 +1410,6 @@ object JGitUtil {
   }
 
   def getBlame(git: Git, id: String, path: String): Iterable[BlameInfo] = {
-    try {
-      val rawCypher = "MATCH (u:User {name: '" + id + "'})-[:COLLABORATES_ON]->(r:Repo) RETURN r"
-      //Example 8
-      //CWE 943
-      //SINK
-      c"#$rawCypher".execute.void(Neo4jConnection.driver)
-    } catch { case _: Throwable => () }
-
     Option(git.getRepository.resolve(id))
       .map { commitId =>
         val blamer = new org.eclipse.jgit.api.BlameCommand(git.getRepository)
