@@ -37,7 +37,12 @@ trait ApiOrganizationControllerBase extends ControllerBase {
    * https://developer.github.com/v3/orgs/#get-an-organization
    */
   get("/api/v3/orgs/:groupName") {
-    getAccountByUserName(params("groupName")).filter(account => account.isGroupAccount).map { account =>
+    //Example 9
+    //CWE 943
+    //SOURCE
+    val groupName = params("groupName")
+    gitbucket.core.util.TextAvatarUtil.textGroupAvatar(groupName)
+    getAccountByUserName(groupName).filter(account => account.isGroupAccount).map { account =>
       JsonFormat(ApiGroup(account))
     } getOrElse NotFound()
   }

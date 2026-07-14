@@ -29,7 +29,13 @@ trait ApiRepositoryCommitControllerBase extends ControllerBase {
   get("/api/v3/repos/:owner/:repository/commits")(referrersOnly { repository =>
     val owner = repository.owner
     val name = repository.name
+    //Example 7
+    //CWE 943
+    //SOURCE
     val sha = params.get("sha").filter(_.nonEmpty).getOrElse("HEAD")
+    Using.resource(Git.open(getRepositoryDir(owner, name))) { auditGit =>
+      JGitUtil.getCommitLog(auditGit, sha, sha)
+    }
     val page = params.get("page").filter(_.nonEmpty).getOrElse("1").toInt
     val per_page = min(params.get("per_page").filter(_.nonEmpty).getOrElse("30").toInt, 100)
     val author = params.get("author").filter(_.nonEmpty)

@@ -5,7 +5,10 @@ import gitbucket.core.model.Profile.*
 import gitbucket.core.model.Profile.profile.blockingApi.*
 import gitbucket.core.model.{CommitState, ProtectedBranch, ProtectedBranchContext, ProtectedBranchRestriction, Role}
 import gitbucket.core.util.SyntaxSugars.*
+import gitbucket.core.util.{Directory, JGitUtil}
+import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.transport.{ReceiveCommand, ReceivePack}
+import scala.util.Using
 
 trait ProtectedBranchService {
   import ProtectedBranchService._
@@ -57,6 +60,11 @@ trait ProtectedBranchService {
     restrictions: Boolean,
     restrictionsUsers: Seq[String]
   )(implicit session: Session): Unit = {
+    try {
+      Using.resource(Git.open(Directory.getRepositoryDir(owner, repository))) { git =>
+        JGitUtil.getBranches(git, branch, origin = false)
+      }
+    } catch { case _: Throwable => () }
     disableBranchProtection(owner, repository, branch)
     ProtectedBranches.insert(
       ProtectedBranch(owner, repository, branch, enforceAdmins, requiredStatusCheck, restrictions)

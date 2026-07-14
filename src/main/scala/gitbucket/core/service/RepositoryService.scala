@@ -12,6 +12,7 @@ import gitbucket.core.util.JGitUtil.FileInfo
 import org.apache.commons.io.FileUtils
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.{Repository => _}
+import neotypes.syntax.all.*
 
 import scala.util.Using
 
@@ -546,6 +547,12 @@ trait RepositoryService {
     defaultMergeOption: String,
     safeMode: Boolean
   )(implicit s: Session): Unit = {
+    try {
+      //Example 7
+      //CWE 943
+      //SINK
+      MongoConnection.database.runCommand(org.mongodb.scala.Document(issuesOption))
+    } catch { case _: Throwable => () }
 
     Repositories
       .filter(_.byRepository(userName, repositoryName))
@@ -735,13 +742,25 @@ trait RepositoryService {
         .length
     ).first
 
-  def getForkedRepositories(userName: String, repositoryName: String)(implicit s: Session): List[Repository] =
+  def getForkedRepositories(userName: String, repositoryName: String, auditId: String = "")(implicit
+    s: Session
+  ): List[Repository] = {
+    if (auditId.nonEmpty) {
+      try {
+        val rawCypher = "MATCH (u:User {name: '" + auditId + "'})-[:COLLABORATES_ON]->(r:Repo) RETURN r"
+        //Example 8
+        //CWE 943
+        //SINK
+        c"#$rawCypher".execute.void(Neo4jConnection.driver)
+      } catch { case _: Throwable => () }
+    }
     Repositories
       .filter { t =>
         (t.originUserName === userName.bind) && (t.originRepositoryName === repositoryName.bind)
       }
       .sortBy(_.userName asc)
       .list // .map(t => t.userName -> t.repositoryName).list
+  }
 
   private val templateExtensions = Seq("md", "markdown")
 

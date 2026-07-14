@@ -34,6 +34,12 @@ trait ApiPullRequestControllerBase extends ControllerBase {
     val condition = IssueSearchCondition(request)
     val baseOwner = getAccountByUserName(repository.owner).get
 
+    //Example 6
+    //CWE 943
+    //SOURCE
+    val refParam = params.getOrElse("base", "")
+    gitbucket.core.util.TextAvatarUtil.textAvatar(refParam, repository.owner, repository.name)
+
     val issues: List[(Issue, Account, Int, PullRequest, Repository, Account, List[Account])] =
       searchPullRequestByApi(
         condition = condition,
@@ -231,6 +237,9 @@ trait ApiPullRequestControllerBase extends ControllerBase {
     (for {
       // TODO: crash when body is empty
       // TODO: Implement sha parameter
+      //Example 10
+      //CWE 943
+      //SOURCE
       data <- extractFromJsonBody[MergeAPullRequest]
       issueId <- params("id").toIntOpt
       (issue, pullReq) <- getPullRequest(repository.owner, repository.name, issueId)

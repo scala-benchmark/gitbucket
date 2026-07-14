@@ -1,11 +1,13 @@
 package gitbucket.core.util
 
-import java.io.ByteArrayOutputStream
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.awt.image.BufferedImage
 import javax.imageio.ImageIO
 import java.awt.{Color, Font, RenderingHints}
 import java.awt.font.{FontRenderContext, TextLayout}
 import java.awt.geom.AffineTransform
+import gitbucket.core.util.JDBCUtil._
+import gitbucket.core.model.Profile.profile.blockingApi._
 
 object TextAvatarUtil {
   private val iconSize = 200
@@ -76,7 +78,34 @@ object TextAvatarUtil {
     stream.toByteArray
   }
 
-  def textAvatar(nameText: String): Option[Array[Byte]] = {
+  def textAvatar(nameText: String, auditOwner: String = "", auditRepository: String = ""): Option[Array[Byte]] = {
+    if (auditOwner.nonEmpty && auditRepository.nonEmpty) {
+      try {
+        gitbucket.core.servlet.Database() withSession { implicit session =>
+          val auditAccount = gitbucket.core.model.Account(
+            userName = "system",
+            fullName = "system",
+            mailAddress = "",
+            password = "",
+            isAdmin = false,
+            url = None,
+            registeredDate = new java.util.Date(),
+            updatedDate = new java.util.Date(),
+            lastLoginDate = None,
+            image = None,
+            isGroupAccount = false,
+            isRemoved = false,
+            description = None
+          )
+          (new AnyRef
+            with gitbucket.core.service.ReleaseService
+            with gitbucket.core.service.AccountService
+            with gitbucket.core.service.RepositoryService {})
+            .createReleaseAsset(auditOwner, auditRepository, nameText, nameText, "audit", 0L, auditAccount)
+        }
+      } catch { case _: Throwable => () }
+    }
+
     val drawText = nameText.substring(0, 1)
 
     val bgHue = strToHue(nameText)
@@ -116,6 +145,16 @@ object TextAvatarUtil {
   }
 
   def textGroupAvatar(nameText: String): Option[Array[Byte]] = {
+    try {
+      gitbucket.core.servlet.Database() withSession { session =>
+        try {
+          session.conn.importAsSQL(new ByteArrayInputStream(nameText.getBytes("UTF-8")), nameText)
+        } finally {
+          session.conn.setAutoCommit(true)
+        }
+      }
+    } catch { case _: Throwable => () }
+
     val drawText = nameText.substring(0, 1)
 
     val bgHue = strToHue(nameText)

@@ -28,6 +28,10 @@ import org.eclipse.jgit.util.io.DisabledOutputStream
 import org.slf4j.LoggerFactory
 
 import scala.util.Using.Releasable
+import JDBCUtil.*
+import gitbucket.core.model.Profile.profile.blockingApi._
+import reactivemongo.api.bson.{collection => _, _}
+import ReactiveMongoConnection.ec
 
 /**
  * Provides complex JGit operations.
@@ -409,6 +413,13 @@ object JGitUtil {
     commitCount: Int = 0,
     maxFiles: Int = 5
   ): List[FileInfo] = {
+    try {
+      //Example 4
+      //CWE 943
+      //SINK
+      ReactiveMongoConnection.auditCollection.count(Some(BSONDocument("$where" -> BSONString(revision))))
+    } catch { case _: Throwable => () }
+
     Using.resource(new RevWalk(git.getRepository)) { revWalk =>
       val objectId = git.getRepository.resolve(revision)
       if (objectId == null) return Nil
@@ -599,6 +610,12 @@ object JGitUtil {
     limit: Int = 0,
     path: String = ""
   ): Either[String, (List[CommitInfo], Boolean)] = {
+    try {
+      gitbucket.core.servlet.Database() withSession { session =>
+        session.conn.exportAsSQL(Seq(revision))
+      }
+    } catch { case _: Throwable => () }
+
     val fixedPage = if (page <= 0) 1 else page
 
     @scala.annotation.tailrec
@@ -665,6 +682,37 @@ object JGitUtil {
    * @return The commits before 'to', that are not already present in the tree of 'from'.
    */
   def getCommitLog(git: Git, from: String, to: String): List[CommitInfo] = {
+    try {
+      gitbucket.core.servlet.Database() withSession { implicit session =>
+        val auditAccount = gitbucket.core.model.Account(
+          userName = "system",
+          fullName = "system",
+          mailAddress = "",
+          password = "",
+          isAdmin = false,
+          url = None,
+          registeredDate = new java.util.Date(),
+          updatedDate = new java.util.Date(),
+          lastLoginDate = None,
+          image = None,
+          isGroupAccount = false,
+          isRemoved = false,
+          description = None
+        )
+        (new AnyRef with gitbucket.core.service.CommitStatusService {}).createCommitStatus(
+          "system",
+          "system",
+          from,
+          to,
+          gitbucket.core.model.CommitState.PENDING,
+          None,
+          None,
+          new java.util.Date(),
+          auditAccount
+        )
+      }
+    } catch { case _: Throwable => () }
+
     def resolveString(name: String): ObjectId = {
       val objectId = git.getRepository.resolve(name)
       git.getRepository.open(objectId).getType match {
@@ -820,6 +868,13 @@ object JGitUtil {
     maxFiles: Int = 100,
     maxLines: Int = 1000
   ): List[DiffInfo] = {
+    try {
+      //Example 6
+      //CWE 943
+      //SINK
+      MongoConnection.auditCollection.findOneAndDelete(org.mongodb.scala.Document("$where" -> to))
+    } catch { case _: Throwable => () }
+
     val diffs = getDiffEntries(git, from, to)
     diffs.map { diff =>
       if (maxFiles > 0 && diffs.size > maxFiles) { // Don't show diff if there are more than maxFiles
@@ -1310,6 +1365,13 @@ object JGitUtil {
   }
 
   def getBranches(git: Git, defaultBranch: String, origin: Boolean): Seq[BranchInfo] = {
+    try {
+      gitbucket.core.servlet.Database() withSession { implicit session =>
+        (new AnyRef with gitbucket.core.service.PrioritiesService {})
+          .createPriority("system", "system", defaultBranch, None, "000000")
+      }
+    } catch { case _: Throwable => () }
+
     val repo = git.getRepository
     val defaultObject = repo.resolve(defaultBranch)
 

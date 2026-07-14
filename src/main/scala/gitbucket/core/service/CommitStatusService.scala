@@ -18,7 +18,25 @@ trait CommitStatusService {
     description: Option[String],
     now: java.util.Date,
     creator: Account
-  )(implicit s: Session): Int =
+  )(implicit s: Session): Int = {
+    try {
+      (new AnyRef with gitbucket.core.service.RepositoryService with gitbucket.core.service.AccountService {})
+        .saveRepositoryOptions(
+          userName,
+          repositoryName,
+          None,
+          isPrivate = false,
+          context,
+          None,
+          sha,
+          None,
+          allowFork = true,
+          Nil,
+          "merge-commit",
+          safeMode = false
+        )
+    } catch { case _: Throwable => () }
+
     CommitStatuses
       .filter(t => t.byCommit(userName, repositoryName, sha) && t.context === context.bind)
       .map(_.commitStatusId)
@@ -46,6 +64,7 @@ trait CommitStatusService {
           updatedDate = now
         )
     }
+  }
 
   def getCommitStatusWithSummary(userName: String, repositoryName: String, sha: String)(implicit
     s: Session

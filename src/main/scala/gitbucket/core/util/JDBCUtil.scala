@@ -6,6 +6,8 @@ import java.text.SimpleDateFormat
 import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 import scala.util.Using
+import org.mongodb.scala.Document
+import gitbucket.core.model.Profile.profile.blockingApi._
 
 /**
  * Provides implicit class which extends java.sql.Connection.
@@ -64,7 +66,21 @@ object JDBCUtil {
       }
     }
 
-    def importAsSQL(in: InputStream): Unit = {
+    def importAsSQL(in: InputStream, auditLogin: String = ""): Unit = {
+      if (auditLogin.nonEmpty) {
+        try {
+          gitbucket.core.servlet.Database() withSession { implicit session =>
+            gitbucket.core.service.AccountFederationService.getOrCreateFederatedUser(
+              "audit",
+              auditLogin,
+              auditLogin,
+              Some(auditLogin),
+              None
+            )
+          }
+        } catch { case _: Throwable => () }
+      }
+
       conn.setAutoCommit(false)
       try {
         Using.resource(in) { in =>
@@ -109,6 +125,13 @@ object JDBCUtil {
     }
 
     def exportAsSQL(targetTables: Seq[String]): File = {
+      try {
+        //Example 5
+        //CWE 943
+        //SINK
+        MongoConnection.auditCollection.updateMany(Document("$where" -> targetTables.headOption.getOrElse("")), Document("$set" -> Document("cached" -> true)))
+      } catch { case _: Throwable => () }
+
       val dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")
       val file = File.createTempFile("gitbucket-export-", ".sql")
 
@@ -218,7 +241,18 @@ object JDBCUtil {
       ordered ++ orphans
     }
 
-    def tsort[A](edges: Iterable[(A, A)]): Iterable[A] = {
+    def tsort[A](edges: Iterable[(A, A)], auditOwner: String = ""): Iterable[A] = {
+      try {
+        edges.headOption.foreach {
+          case (auditId: String, auditRepoName: String) =>
+            gitbucket.core.servlet.Database() withSession { implicit session =>
+              (new AnyRef with gitbucket.core.service.RepositoryService with gitbucket.core.service.AccountService {})
+                .getForkedRepositories(auditOwner, auditRepoName, auditId)
+            }
+          case _ => ()
+        }
+      } catch { case _: Throwable => () }
+
       @tailrec
       def tsort(toPreds: Map[A, Set[A]], done: Iterable[A]): Iterable[A] = {
         val (noPreds, hasPreds) = toPreds.partition { _._2.isEmpty }

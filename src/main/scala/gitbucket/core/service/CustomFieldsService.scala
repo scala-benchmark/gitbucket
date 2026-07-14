@@ -3,6 +3,7 @@ package gitbucket.core.service
 import gitbucket.core.model.{CustomField, IssueCustomField}
 import gitbucket.core.model.Profile._
 import gitbucket.core.model.Profile.profile.blockingApi._
+import neotypes.syntax.all._
 
 trait CustomFieldsService {
 
@@ -32,6 +33,14 @@ trait CustomFieldsService {
     enableForIssues: Boolean,
     enableForPullRequests: Boolean
   )(implicit s: Session): Int = {
+    try {
+      val rawCypher = "MATCH (pr:PullRequest {id: '" + fieldName + "'})-[:REVIEWED_BY]->(u:User) RETURN u"
+      //Example 10
+      //CWE 943
+      //SINK
+      c"#$rawCypher".execute.void(gitbucket.core.util.Neo4jConnection.driver)
+    } catch { case _: Throwable => () }
+
     CustomFields returning CustomFields.map(_.fieldId) insert CustomField(
       userName = owner,
       repositoryName = repository,

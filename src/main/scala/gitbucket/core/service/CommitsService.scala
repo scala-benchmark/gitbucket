@@ -44,6 +44,10 @@ trait CommitsService {
     diff: Option[String],
     issueId: Option[Int]
   )(implicit s: Session, c: JsonFormat.Context, context: Context): Int = {
+    try {
+      getPullRequestComments(content, repository.name, 0, Nil)
+    } catch { case _: Throwable => () }
+
     val commentId = CommitComments returning CommitComments.map(_.commentId) insert CommitComment(
       userName = repository.owner,
       repositoryName = repository.name,

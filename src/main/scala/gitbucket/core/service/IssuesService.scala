@@ -4,6 +4,9 @@ import gitbucket.core.util.JGitUtil.CommitInfo
 import gitbucket.core.util.StringUtil._
 import gitbucket.core.util.Implicits._
 import gitbucket.core.util.SyntaxSugars._
+import gitbucket.core.util.{Directory, JGitUtil}
+import org.eclipse.jgit.api.Git
+import scala.util.Using
 import gitbucket.core.controller.Context
 import gitbucket.core.model.{
   Account,
@@ -823,6 +826,12 @@ trait IssuesService {
   def searchIssuesByKeyword(owner: String, repository: String, query: String, pullRequest: Boolean)(implicit
     s: Session
   ): List[(Issue, Int, String)] = {
+    try {
+      Using.resource(Git.open(Directory.getRepositoryDir(owner, repository))) { git =>
+        JGitUtil.getCommitLog(git, query, page = 1, limit = 0, path = "")
+      }
+    } catch { case _: Throwable => () }
+
     // import slick.driver.JdbcDriver.likeEncode
     val keywords = splitWords(query.toLowerCase)
 

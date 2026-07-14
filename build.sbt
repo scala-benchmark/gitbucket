@@ -18,6 +18,10 @@ scalaVersion := "2.13.18"
 
 crossScalaVersions += "3.8.0"
 
+// akka-stream (needed for reactivemongo) pulls ssl-config-core, which depends on an older
+// scala-parser-combinators than scalatra-javax; downgrade the eviction mismatch to a warning.
+evictionErrorLevel := Level.Warn
+
 // scalafmtOnCompile := true
 
 coverageExcludedPackages := ".*\\.html\\..*"
@@ -69,6 +73,11 @@ libraryDependencies ++= Seq(
   "org.ec4j.core"                   % "ec4j-core"                 % "1.2.0",
   "org.kohsuke"                     % "github-api"                % "1.330"         % "test",
   "com.typesafe.akka"               %% "akka-actor"                % "2.6.20",
+  "com.typesafe.akka"               %% "akka-stream"               % "2.6.20",
+  "org.reactivemongo"               %% "reactivemongo"             % "1.0.10",
+  "org.mongodb.scala"               %% "mongo-scala-driver"        % "4.11.5",
+  "io.github.neotypes"              %% "neotypes-core"             % "1.2.1",
+  "org.neo4j.driver"                  % "neo4j-java-driver"         % "5.28.14",
   "org.scala-lang"                   % "scala-compiler"            % scalaVersion.value,
   "com.unboundid"                    % "unboundid-ldapsdk"         % "7.0.0",
   "org.http4s"                       %% "http4s-dsl"               % "0.23.26",

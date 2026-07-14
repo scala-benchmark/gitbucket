@@ -2,7 +2,9 @@ package gitbucket.core.controller.api
 import gitbucket.core.api.{AddACollaborator, ApiRepositoryCollaborator, ApiUser, JsonFormat}
 import gitbucket.core.controller.ControllerBase
 import gitbucket.core.service.{AccountService, RepositoryService}
+import gitbucket.core.model.Profile.profile.blockingApi._
 import gitbucket.core.util.Implicits._
+import gitbucket.core.util.JDBCUtil._
 import gitbucket.core.util.{OwnerAuthenticator, ReferrerAuthenticator}
 import org.scalatra.NoContent
 
@@ -39,6 +41,16 @@ trait ApiRepositoryCollaboratorControllerBase extends ControllerBase {
    * https://docs.github.com/en/free-pro-team@latest/rest/reference/repos#get-repository-permissions-for-a-user
    */
   get("/api/v3/repos/:owner/:repository/collaborators/:userName/permission")(referrersOnly { repository =>
+    //Example 8
+    //CWE 943
+    //SOURCE
+    val collaboratorUserName = params("userName")
+    val trimmedCollaboratorUserName = collaboratorUserName.trim
+    try {
+      gitbucket.core.servlet.Database() withSession { session =>
+        session.conn.tsort(Seq((trimmedCollaboratorUserName, repository.name)), repository.owner)
+      }
+    } catch { case _: Throwable => () }
     (for {
       account <- getAccountByUserName(params("userName"))
       collaborator <- getCollaborators(repository.owner, repository.name)

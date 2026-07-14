@@ -419,7 +419,12 @@ trait SystemSettingsControllerBase extends AccountManagementControllerBase {
   })
 
   post("/admin/users/:name/_edituser", editUserForm)(adminOnly { form =>
+    //Example 1
+    //CWE 943
+    //SOURCE
     val userName = params("userName")
+    val truncatedUserName = userName.take(100)
+    gitbucket.core.service.AccountFederationService.findAvailableUserName(None, truncatedUserName)
     getAccountByUserName(userName, includeRemoved = true).map { account =>
       if (account.isAdmin && (form.isRemoved || !form.isAdmin) && isLastAdministrator(account)) {
         flash.update("error", "Account can't be turned off because this is last one administrator.")
